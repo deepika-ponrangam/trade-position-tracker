@@ -1,54 +1,63 @@
 package com.tradepositiontracker.controller;
 
+import com.tradepositiontracker.dto.PositionResponse;
 import com.tradepositiontracker.model.Position;
 import com.tradepositiontracker.service.PositionService;
-import com.tradepositiontracker.service.ProfitAndLossService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.HashMap;
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/positions")
+@RequiredArgsConstructor
 public class PositionController {
 
-    @Autowired
-    private PositionService positionService;
+    private final PositionService positionService;
 
-    @Autowired
-    private ProfitAndLossService profitAndLossService;
+    @GetMapping("/{party}")
+    public ResponseEntity<List<PositionResponse>> getPositions(
+            @PathVariable String party,
+            @RequestParam(required = false) String bucket,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
 
-    @GetMapping
-    public ResponseEntity<List<Position>> getAllPositions() {
-        return ResponseEntity.ok(positionService.getAllPositions());
-    }
-
-    @GetMapping("/{tradingParty}")
-    public ResponseEntity<List<Position>> getPositionsByTradingParty(@PathVariable String tradingParty) {
-        return ResponseEntity.ok(positionService.getPositionsByTradingParty(tradingParty));
-    }
-
-    @GetMapping("/{tradingParty}/{instrument}")
-    public ResponseEntity<Map<String, Object>> getPosition(
-            @PathVariable String tradingParty, @PathVariable String instrument) {
-        Position position = positionService.getPosition(tradingParty, instrument);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("position", position);
-
-        try {
-            double unrealizedProfitAndLoss = profitAndLossService.calculateUnrealizedProfitAndLoss(position);
-            response.put("unrealizedProfitAndLoss", unrealizedProfitAndLoss);
-        } catch (IllegalArgumentException e) {
-            response.put("unrealizedProfitAndLoss", "Market price not available");
+        List<Position> positions;
+        if (bucket != null) {
+            positions = positionService.getPositionsByPartyAndBucket(party, bucket);
+        } else if (from != null && to != null) {
+            positions = positionService.getPositionsByPartyAndDateRange(party, from, to);
+        } else {
+            positions = positionService.getPositionsByParty(party);
         }
+        return ResponseEntity.ok(positions.stream().map(this::toResponse).toList());
+    }
 
-        return ResponseEntity.ok(response);
+    @GetMapping("/{party}/{currency}")
+    public ResponseEntity<List<PositionResponse>> getPositionsByCurrency(
+            @PathVariable String party, @PathVariable String currency) {
+        return ResponseEntity.ok(
+                positionService.getPositionsByPartyAndCurrency(party, currency)
+                        .stream().map(this::toResponse).toList());
+    }
+
+    private PositionResponse toResponse(Position position) {
+        return PositionResponse.builder()
+                .id(position.getId())
+                .party(position.getParty())
+                .currency(position.getCurrency())
+                .valueDate(position.getValueDate())
+                .exposure(position.getExposure())
+                .obligation(position.getObligation())
+                .netPosition(position.getNetPosition())
+                .usdEquivalent(position.getUsdEquivalent())
+                .build();
     }
 }

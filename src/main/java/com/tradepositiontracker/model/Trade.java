@@ -1,92 +1,70 @@
 package com.tradepositiontracker.model;
 
+import com.tradepositiontracker.enums.Direction;
+import com.tradepositiontracker.enums.TradeStatus;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+@Data
+@EqualsAndHashCode(callSuper = true)
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "trades")
-public class Trade {
+public class Trade extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true, nullable = false)
+    private String tradeReference;
+
+    @Column(nullable = false)
     private String tradingParty;
-    private String instrument;
-    private String side;
-    private int quantity;
-    private double price;
-    private LocalDateTime timestamp;
 
-    public Trade() {
-    }
+    @Column(nullable = false)
+    private String counterParty;
 
-    public Trade(String tradingParty, String instrument, String side, int quantity, double price) {
-        this.tradingParty = tradingParty;
-        this.instrument = instrument;
-        this.side = side;
-        this.quantity = quantity;
-        this.price = price;
-        this.timestamp = LocalDateTime.now();
-    }
+    @Column(nullable = false)
+    private String primaryCurrency;
 
-    public Long getId() {
-        return id;
-    }
+    @Column(nullable = false, precision = 19, scale = 4)
+    private BigDecimal primaryAmount;
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    @Column(nullable = false)
+    private String secondaryCurrency;
 
-    public String getTradingParty() {
-        return tradingParty;
-    }
+    @Column(nullable = false, precision = 19, scale = 4)
+    private BigDecimal secondaryAmount;
 
-    public void setTradingParty(String tradingParty) {
-        this.tradingParty = tradingParty;
-    }
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Direction direction;
 
-    public String getInstrument() {
-        return instrument;
-    }
+    @Column(nullable = false)
+    private LocalDate valueDate;
 
-    public void setInstrument(String instrument) {
-        this.instrument = instrument;
-    }
+    @Column(nullable = false)
+    private LocalDate tradeDate;
 
-    public String getSide() {
-        return side;
-    }
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TradeStatus status;
 
-    public void setSide(String side) {
-        this.side = side;
-    }
-
-    public int getQuantity() {
-        return quantity;
-    }
-
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
-    }
-
-    public double getPrice() {
-        return price;
-    }
-
-    public void setPrice(double price) {
-        this.price = price;
-    }
-
-    public LocalDateTime getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(LocalDateTime timestamp) {
-        this.timestamp = timestamp;
-    }
+    private LocalDateTime settledAt;
 }

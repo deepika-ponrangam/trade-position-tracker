@@ -1,82 +1,60 @@
 package com.tradepositiontracker.model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Data
+@EqualsAndHashCode(callSuper = true)
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
-@Table(name = "positions", uniqueConstraints = @UniqueConstraint(columnNames = {"tradingParty", "instrument"}))
-public class Position {
+@Table(name = "positions", uniqueConstraints = @UniqueConstraint(columnNames = {"party", "currency", "value_date"}))
+public class Position extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String tradingParty;
-    private String instrument;
-    private int quantity;
-    private double averageCostPrice;
-    private double realizedProfitAndLoss;
+    @Column(nullable = false)
+    private String party;
 
-    public Position() {
-    }
+    @Column(nullable = false)
+    private String currency;
 
-    public Position(String tradingParty, String instrument) {
-        this.tradingParty = tradingParty;
-        this.instrument = instrument;
-        this.quantity = 0;
-        this.averageCostPrice = 0.0;
-        this.realizedProfitAndLoss = 0.0;
-    }
+    @Column(nullable = false)
+    private LocalDate valueDate;
 
-    public Long getId() {
-        return id;
-    }
+    @Column(nullable = false, precision = 19, scale = 4)
+    private BigDecimal exposure = BigDecimal.ZERO;
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    @Column(nullable = false, precision = 19, scale = 4)
+    private BigDecimal obligation = BigDecimal.ZERO;
 
-    public String getTradingParty() {
-        return tradingParty;
-    }
+    @Column(nullable = false, precision = 19, scale = 4)
+    private BigDecimal netPosition = BigDecimal.ZERO;
 
-    public void setTradingParty(String tradingParty) {
-        this.tradingParty = tradingParty;
-    }
+    @Column(precision = 19, scale = 4)
+    private BigDecimal usdEquivalent = BigDecimal.ZERO;
 
-    public String getInstrument() {
-        return instrument;
-    }
-
-    public void setInstrument(String instrument) {
-        this.instrument = instrument;
-    }
-
-    public int getQuantity() {
-        return quantity;
-    }
-
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
-    }
-
-    public double getAverageCostPrice() {
-        return averageCostPrice;
-    }
-
-    public void setAverageCostPrice(double averageCostPrice) {
-        this.averageCostPrice = averageCostPrice;
-    }
-
-    public double getRealizedProfitAndLoss() {
-        return realizedProfitAndLoss;
-    }
-
-    public void setRealizedProfitAndLoss(double realizedProfitAndLoss) {
-        this.realizedProfitAndLoss = realizedProfitAndLoss;
+    public Position(String party, String currency, LocalDate valueDate) {
+        this.party = party;
+        this.currency = currency;
+        this.valueDate = valueDate;
+        this.exposure = BigDecimal.ZERO;
+        this.obligation = BigDecimal.ZERO;
+        this.netPosition = BigDecimal.ZERO;
+        this.usdEquivalent = BigDecimal.ZERO;
     }
 }

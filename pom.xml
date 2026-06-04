@@ -14,7 +14,7 @@
     <artifactId>trade-position-tracker</artifactId>
     <version>1.0.0</version>
     <name>TradePositionTracker</name>
-    <description>Trade Position and Profit &amp; Loss Tracker</description>
+    <description>FX Trade Position Tracker</description>
 
     <properties>
         <java.version>21</java.version>
@@ -33,6 +33,15 @@
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
         </dependency>
     </dependencies>
 

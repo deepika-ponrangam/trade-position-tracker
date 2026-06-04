@@ -1,96 +1,209 @@
 package com.tradepositiontracker.service;
 
+import com.tradepositiontracker.enums.Direction;
+import com.tradepositiontracker.enums.PositionAction;
 import com.tradepositiontracker.model.Position;
 import com.tradepositiontracker.model.Trade;
 import com.tradepositiontracker.repository.PositionRepository;
-import com.tradepositiontracker.repository.TradeRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class PositionService {
 
-    @Autowired
-    private PositionRepository positionRepository;
+    private final PositionRepository positionRepository;
+    private final PositionHistoryService positionHistoryService;
+    private final ExchangeRateService exchangeRateService;
 
-    @Autowired
-    private TradeRepository tradeRepository;
+    public void updatePositionsForNewTrade(Trade trade) {
+        String tradingParty = trade.getTradingParty();
+        String counterParty = trade.getCounterParty();
+        String primaryCurrency = trade.getPrimaryCurrency();
+        String secondaryCurrency = trade.getSecondaryCurrency();
+        BigDecimal primaryAmount = trade.getPrimaryAmount();
+        BigDecimal secondaryAmount = trade.getSecondaryAmount();
+        LocalDate valueDate = trade.getValueDate();
 
-    @Autowired
-    private TradeValidationService tradeValidationService;
-
-    @Autowired
-    private ProfitAndLossService profitAndLossService;
-
-    @Transactional
-    public Position processTrade(Trade trade) {
-        tradeValidationService.validate(trade);
-        trade.setTimestamp(LocalDateTime.now());
-        tradeRepository.save(trade);
-
-        Position position = positionRepository
-                .findByTradingPartyAndInstrument(trade.getTradingParty(), trade.getInstrument())
-                .orElse(new Position(trade.getTradingParty(), trade.getInstrument()));
-
-        int tradeQuantity = trade.getSide().equals("BUY") ? trade.getQuantity() : -trade.getQuantity();
-
-        if (position.getQuantity() == 0) {
-            position.setQuantity(tradeQuantity);
-            position.setAverageCostPrice(trade.getPrice());
-        } else if (sameDirection(position.getQuantity(), tradeQuantity)) {
-            double newAvgCost = calculateWeightedAverageCost(
-                    Math.abs(position.getQuantity()), position.getAverageCostPrice(),
-                    Math.abs(tradeQuantity), trade.getPrice());
-            position.setQuantity(position.getQuantity() + tradeQuantity);
-            position.setAverageCostPrice(newAvgCost);
+        if (trade.getDirection() == Direction.BUY) {
+            addExposure(tradingParty, primaryCurrency, valueDate, primaryAmount, trade.getTradeReference());
+            addObligation(tradingParty, secondaryCurrency, valueDate, secondaryAmount, trade.getTradeReference());
+            addExposure(counterParty, secondaryCurrency, valueDate, secondaryAmount, trade.getTradeReference());
+            addObligation(counterParty, primaryCurrency, valueDate, primaryAmount, trade.getTradeReference());
         } else {
-            handleOppositeDirectionTrade(position, trade, tradeQuantity);
-        }
-
-        return positionRepository.save(position);
-    }
-
-    private void handleOppositeDirectionTrade(Position position, Trade trade, int tradeQuantity) {
-        int absExisting = Math.abs(position.getQuantity());
-        int absTrade = Math.abs(tradeQuantity);
-
-        double realizedPnl = profitAndLossService.calculateRealizedProfitAndLoss(position, trade);
-        position.setRealizedProfitAndLoss(position.getRealizedProfitAndLoss() + realizedPnl);
-        position.setQuantity(position.getQuantity() + tradeQuantity);
-
-        if (position.getQuantity() == 0) {
-            position.setAverageCostPrice(0);
-        } else if (absTrade > absExisting) {
-            position.setAverageCostPrice(trade.getPrice());
+            addExposure(tradingParty, primaryCurrency, valueDate, primaryAmount, trade.getTradeReference());
+            addObligation(tradingParty, secondaryCurrency, valueDate, secondaryAmount, trade.getTradeReference());
+            addExposure(counterParty, secondaryCurrency, valueDate, secondaryAmount, trade.getTradeReference());
+            addObligation(counterParty, primaryCurrency, valueDate, primaryAmount, trade.getTradeReference());
         }
     }
 
-    private double calculateWeightedAverageCost(int existingQuantity, double existingAvgCost,
-                                                 int newQuantity, double newPrice) {
-        long totalCost = (long) (existingQuantity * existingAvgCost + newQuantity * newPrice);
-        int totalQuantity = existingQuantity + newQuantity;
-        return totalCost / totalQuantity;
+    public void reversePositionsForTrade(Trade trade) {
+        String tradingParty = trade.getTradingParty();
+        String counterParty = trade.getCounterParty();
+        String primaryCurrency = trade.getPrimaryCurrency();
+        String secondaryCurrency = trade.getSecondaryCurrency();
+        BigDecimal primaryAmount = trade.getPrimaryAmount();
+        BigDecimal secondaryAmount = trade.getSecondaryAmount();
+        LocalDate valueDate = trade.getValueDate();
+
+        if (trade.getDirection() == Direction.BUY) {
+            reduceExposure(tradingParty, primaryCurrency, valueDate, primaryAmount, trade.getTradeReference());
+            reduceObligation(tradingParty, secondaryCurrency, valueDate, secondaryAmount, trade.getTradeReference());
+            reduceExposure(counterParty, secondaryCurrency, valueDate, secondaryAmount, trade.getTradeReference());
+            reduceObligation(counterParty, primaryCurrency, valueDate, primaryAmount, trade.getTradeReference());
+        } else {
+            reduceExposure(tradingParty, secondaryCurrency, valueDate, secondaryAmount, trade.getTradeReference());
+            reduceObligation(tradingParty, primaryCurrency, valueDate, primaryAmount, trade.getTradeReference());
+            reduceExposure(counterParty, primaryCurrency, valueDate, primaryAmount, trade.getTradeReference());
+            reduceObligation(counterParty, secondaryCurrency, valueDate, secondaryAmount, trade.getTradeReference());
+        }
     }
 
-    private boolean sameDirection(int existingQuantity, int tradeQuantity) {
-        return (existingQuantity > 0 && tradeQuantity > 0) || (existingQuantity < 0 && tradeQuantity < 0);
+    public void settlePositionsForTrade(Trade trade) {
+        String tradingParty = trade.getTradingParty();
+        String counterParty = trade.getCounterParty();
+        String primaryCurrency = trade.getPrimaryCurrency();
+        String secondaryCurrency = trade.getSecondaryCurrency();
+        BigDecimal primaryAmount = trade.getPrimaryAmount();
+        BigDecimal secondaryAmount = trade.getSecondaryAmount();
+        LocalDate valueDate = trade.getValueDate();
+
+        if (trade.getDirection() == Direction.BUY) {
+            settlePosition(tradingParty, primaryCurrency, valueDate, primaryAmount, true, trade.getTradeReference());
+            settlePosition(tradingParty, secondaryCurrency, valueDate, secondaryAmount, false, trade.getTradeReference());
+            settlePosition(counterParty, primaryCurrency, valueDate, primaryAmount, false, trade.getTradeReference());
+            settlePosition(counterParty, secondaryCurrency, valueDate, secondaryAmount, true, trade.getTradeReference());
+        } else {
+            settlePosition(tradingParty, primaryCurrency, valueDate, primaryAmount, false, trade.getTradeReference());
+            settlePosition(tradingParty, secondaryCurrency, valueDate, secondaryAmount, true, trade.getTradeReference());
+            settlePosition(counterParty, primaryCurrency, valueDate, primaryAmount, true, trade.getTradeReference());
+            settlePosition(counterParty, secondaryCurrency, valueDate, secondaryAmount, false, trade.getTradeReference());
+        }
     }
 
-    public List<Position> getPositionsByTradingParty(String tradingParty) {
-        return positionRepository.findByTradingParty(tradingParty);
+    private void addExposure(String party, String currency, LocalDate valueDate,
+                              BigDecimal amount, String tradeReference) {
+        Position position = getOrCreatePosition(party, currency, valueDate);
+        BigDecimal prevExposure = position.getExposure();
+        BigDecimal prevObligation = position.getObligation();
+        BigDecimal prevNet = position.getNetPosition();
+
+        position.setExposure(prevExposure.add(amount));
+        updateUsdEquivalent(position);
+        positionRepository.save(position);
+
+        positionHistoryService.recordChange(position, tradeReference, PositionAction.TRADE_BOOKED,
+                prevExposure, prevObligation, prevNet);
     }
 
-    public Position getPosition(String tradingParty, String instrument) {
-        return positionRepository.findByTradingPartyAndInstrument(tradingParty, instrument)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Position not found for " + tradingParty + " / " + instrument));
+    private void addObligation(String party, String currency, LocalDate valueDate,
+                                BigDecimal amount, String tradeReference) {
+        Position position = getOrCreatePosition(party, currency, valueDate);
+        BigDecimal prevExposure = position.getExposure();
+        BigDecimal prevObligation = position.getObligation();
+        BigDecimal prevNet = position.getNetPosition();
+
+        position.setObligation(prevObligation.add(amount));
+        updateUsdEquivalent(position);
+        positionRepository.save(position);
+
+        positionHistoryService.recordChange(position, tradeReference, PositionAction.TRADE_BOOKED,
+                prevExposure, prevObligation, prevNet);
     }
 
-    public List<Position> getAllPositions() {
-        return positionRepository.findAll();
+    private void reduceExposure(String party, String currency, LocalDate valueDate,
+                                 BigDecimal amount, String tradeReference) {
+        Position position = getOrCreatePosition(party, currency, valueDate);
+        BigDecimal prevExposure = position.getExposure();
+        BigDecimal prevObligation = position.getObligation();
+        BigDecimal prevNet = position.getNetPosition();
+
+        position.setExposure(prevExposure.subtract(amount));
+        updateUsdEquivalent(position);
+        positionRepository.save(position);
+
+        positionHistoryService.recordChange(position, tradeReference, PositionAction.TRADE_REVERSED,
+                prevExposure, prevObligation, prevNet);
+    }
+
+    private void reduceObligation(String party, String currency, LocalDate valueDate,
+                                   BigDecimal amount, String tradeReference) {
+        Position position = getOrCreatePosition(party, currency, valueDate);
+        BigDecimal prevExposure = position.getExposure();
+        BigDecimal prevObligation = position.getObligation();
+        BigDecimal prevNet = position.getNetPosition();
+
+        position.setObligation(prevObligation.subtract(amount));
+        updateUsdEquivalent(position);
+        positionRepository.save(position);
+
+        positionHistoryService.recordChange(position, tradeReference, PositionAction.TRADE_REVERSED,
+                prevExposure, prevObligation, prevNet);
+    }
+
+    private void settlePosition(String party, String currency, LocalDate valueDate,
+                                 BigDecimal amount, boolean isReceiving, String tradeReference) {
+        Position position = getOrCreatePosition(party, currency, valueDate);
+        BigDecimal prevExposure = position.getExposure();
+        BigDecimal prevObligation = position.getObligation();
+        BigDecimal prevNet = position.getNetPosition();
+
+        if (isReceiving) {
+            position.setExposure(prevExposure.subtract(amount));
+            position.setNetPosition(prevNet.add(amount));
+        } else {
+            position.setObligation(prevObligation.subtract(amount));
+            position.setNetPosition(prevNet.subtract(amount));
+        }
+        updateUsdEquivalent(position);
+        positionRepository.save(position);
+
+        positionHistoryService.recordChange(position, tradeReference, PositionAction.TRADE_SETTLED,
+                prevExposure, prevObligation, prevNet);
+    }
+
+    private void updateUsdEquivalent(Position position) {
+        if (position.getNetPosition().equals(BigDecimal.ZERO)) {
+            position.setUsdEquivalent(BigDecimal.ZERO);
+            return;
+        }
+        BigDecimal usdEquiv = exchangeRateService.getUsdEquivalent(
+                position.getCurrency(), position.getNetPosition());
+        if (usdEquiv != null) {
+            position.setUsdEquivalent(usdEquiv);
+        }
+    }
+
+    private Position getOrCreatePosition(String party, String currency, LocalDate valueDate) {
+        return positionRepository.findByPartyAndCurrencyAndValueDate(party, currency, valueDate)
+                .orElse(new Position(party, currency, valueDate));
+    }
+
+    public List<Position> getPositionsByParty(String party) {
+        return positionRepository.findByParty(party);
+    }
+
+    public List<Position> getPositionsByPartyAndCurrency(String party, String currency) {
+        return positionRepository.findByPartyAndCurrency(party, currency);
+    }
+
+    public List<Position> getPositionsByPartyAndBucket(String party, String bucket) {
+        LocalDate today = LocalDate.now();
+        return switch (bucket.toUpperCase()) {
+            case "T0" -> positionRepository.findByPartyAndValueDate(party, today);
+            case "T1" -> positionRepository.findByPartyAndValueDate(party, today.plusDays(1));
+            case "T2" -> positionRepository.findByPartyAndValueDate(party, today.plusDays(2));
+            case "FORWARD" -> positionRepository.findByPartyAndValueDateGreaterThan(party, today.plusDays(2));
+            default -> throw new IllegalArgumentException("Invalid bucket. Use T0, T1, T2, or FORWARD");
+        };
+    }
+
+    public List<Position> getPositionsByPartyAndDateRange(String party, LocalDate from, LocalDate to) {
+        return positionRepository.findByPartyAndValueDateBetween(party, from, to);
     }
 }
