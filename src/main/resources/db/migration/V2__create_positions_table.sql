@@ -6,7 +6,6 @@ CREATE TABLE positions (
     exposure DECIMAL(19, 4) NOT NULL DEFAULT 0,
     obligation DECIMAL(19, 4) NOT NULL DEFAULT 0,
     net_position DECIMAL(19, 4) NOT NULL DEFAULT 0,
-    usd_equivalent DECIMAL(19, 4) DEFAULT 0,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP,
     created_by VARCHAR(255),

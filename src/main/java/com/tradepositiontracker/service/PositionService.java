@@ -18,7 +18,6 @@ public class PositionService {
 
     private final PositionRepository positionRepository;
     private final PositionHistoryService positionHistoryService;
-    private final ExchangeRateService exchangeRateService;
 
     public void updatePositionsForNewTrade(Trade trade) {
         String tradingParty = trade.getTradingParty();
@@ -94,7 +93,6 @@ public class PositionService {
         BigDecimal prevNet = position.getNetPosition();
 
         position.setExposure(prevExposure.add(amount));
-        updateUsdEquivalent(position);
         positionRepository.save(position);
 
         positionHistoryService.recordChange(position, tradeReference, PositionAction.TRADE_BOOKED,
@@ -109,7 +107,6 @@ public class PositionService {
         BigDecimal prevNet = position.getNetPosition();
 
         position.setObligation(prevObligation.add(amount));
-        updateUsdEquivalent(position);
         positionRepository.save(position);
 
         positionHistoryService.recordChange(position, tradeReference, PositionAction.TRADE_BOOKED,
@@ -124,7 +121,6 @@ public class PositionService {
         BigDecimal prevNet = position.getNetPosition();
 
         position.setExposure(prevExposure.subtract(amount));
-        updateUsdEquivalent(position);
         positionRepository.save(position);
 
         positionHistoryService.recordChange(position, tradeReference, PositionAction.TRADE_REVERSED,
@@ -139,7 +135,6 @@ public class PositionService {
         BigDecimal prevNet = position.getNetPosition();
 
         position.setObligation(prevObligation.subtract(amount));
-        updateUsdEquivalent(position);
         positionRepository.save(position);
 
         positionHistoryService.recordChange(position, tradeReference, PositionAction.TRADE_REVERSED,
@@ -160,23 +155,10 @@ public class PositionService {
             position.setObligation(prevObligation.subtract(amount));
             position.setNetPosition(prevNet.subtract(amount));
         }
-        updateUsdEquivalent(position);
         positionRepository.save(position);
 
         positionHistoryService.recordChange(position, tradeReference, PositionAction.TRADE_SETTLED,
                 prevExposure, prevObligation, prevNet);
-    }
-
-    private void updateUsdEquivalent(Position position) {
-        if (position.getNetPosition().equals(BigDecimal.ZERO)) {
-            position.setUsdEquivalent(BigDecimal.ZERO);
-            return;
-        }
-        BigDecimal usdEquiv = exchangeRateService.getUsdEquivalent(
-                position.getCurrency(), position.getNetPosition());
-        if (usdEquiv != null) {
-            position.setUsdEquivalent(usdEquiv);
-        }
     }
 
     private Position getOrCreatePosition(String party, String currency, LocalDate valueDate) {

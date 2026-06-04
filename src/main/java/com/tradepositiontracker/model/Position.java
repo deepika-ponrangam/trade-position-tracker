@@ -45,9 +45,6 @@ public class Position extends Auditable {
     @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal netPosition = BigDecimal.ZERO;
 
-    @Column(precision = 19, scale = 4)
-    private BigDecimal usdEquivalent = BigDecimal.ZERO;
-
     public Position(String party, String currency, LocalDate valueDate) {
         this.party = party;
         this.currency = currency;
@@ -55,6 +52,5 @@ public class Position extends Auditable {
         this.exposure = BigDecimal.ZERO;
         this.obligation = BigDecimal.ZERO;
         this.netPosition = BigDecimal.ZERO;
-        this.usdEquivalent = BigDecimal.ZERO;
     }
 }

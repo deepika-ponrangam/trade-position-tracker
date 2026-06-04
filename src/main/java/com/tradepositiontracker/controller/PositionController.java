@@ -2,6 +2,7 @@ package com.tradepositiontracker.controller;
 
 import com.tradepositiontracker.dto.PositionResponse;
 import com.tradepositiontracker.model.Position;
+import com.tradepositiontracker.service.ExchangeRateService;
 import com.tradepositiontracker.service.PositionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -12,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -20,7 +23,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PositionController {
 
+    private static final int SCALE = 4;
+
     private final PositionService positionService;
+    private final ExchangeRateService exchangeRateService;
 
     @GetMapping("/{party}")
     public ResponseEntity<List<PositionResponse>> getPositions(
@@ -44,20 +50,31 @@ public class PositionController {
     public ResponseEntity<List<PositionResponse>> getPositionsByCurrency(
             @PathVariable String party, @PathVariable String currency) {
         return ResponseEntity.ok(
-                positionService.getPositionsByPartyAndCurrency(party, currency)
+                positionService.getPositionsByPartyAndCurrency(party, currency.toUpperCase())
                         .stream().map(this::toResponse).toList());
     }
 
     private PositionResponse toResponse(Position position) {
+        BigDecimal economicValue = position.getExposure()
+                .subtract(position.getObligation())
+                .add(position.getNetPosition());
+
+        BigDecimal usdEquiv = exchangeRateService.getUsdEquivalent(
+                position.getCurrency(), economicValue);
+
         return PositionResponse.builder()
                 .id(position.getId())
                 .party(position.getParty())
                 .currency(position.getCurrency())
                 .valueDate(position.getValueDate())
-                .exposure(position.getExposure())
-                .obligation(position.getObligation())
-                .netPosition(position.getNetPosition())
-                .usdEquivalent(position.getUsdEquivalent())
+                .exposure(formatAmount(position.getExposure()))
+                .obligation(formatAmount(position.getObligation()))
+                .netPosition(formatAmount(position.getNetPosition()))
+                .usdEquivalent(usdEquiv != null ? formatAmount(usdEquiv) : "N/A")
                 .build();
+    }
+
+    private String formatAmount(BigDecimal amount) {
+        return amount.setScale(SCALE, RoundingMode.HALF_UP).toPlainString();
     }
 }

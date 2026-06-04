@@ -3,7 +3,6 @@ package com.tradepositiontracker.dto;
 import lombok.Builder;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
@@ -14,8 +13,8 @@ public class PositionResponse {
     private String party;
     private String currency;
     private LocalDate valueDate;
-    private BigDecimal exposure;
-    private BigDecimal obligation;
-    private BigDecimal netPosition;
-    private BigDecimal usdEquivalent;
+    private String exposure;
+    private String obligation;
+    private String netPosition;
+    private String usdEquivalent;
 }
