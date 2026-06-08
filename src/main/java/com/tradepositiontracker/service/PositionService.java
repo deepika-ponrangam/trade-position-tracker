@@ -20,74 +20,78 @@ public class PositionService {
     private final PositionHistoryService positionHistoryService;
 
     public void updatePositionsForNewTrade(Trade trade) {
-        String tradingParty = trade.getTradingParty();
-        String counterParty = trade.getCounterParty();
-        String primaryCurrency = trade.getPrimaryCurrency();
-        String secondaryCurrency = trade.getSecondaryCurrency();
         BigDecimal primaryAmount = trade.getPrimaryAmount();
         BigDecimal secondaryAmount = trade.getSecondaryAmount();
+        String tradeReference = trade.getTradeReference();
         LocalDate valueDate = trade.getValueDate();
 
+        Position tradingPartyPrimaryPosition = getOrCreatePosition(trade.getTradingParty(), trade.getPrimaryCurrency(), valueDate);
+        Position tradingPartySecondaryPosition = getOrCreatePosition(trade.getTradingParty(), trade.getSecondaryCurrency(), valueDate);
+        Position counterPartyPrimaryPosition = getOrCreatePosition(trade.getCounterParty(), trade.getPrimaryCurrency(), valueDate);
+        Position counterPartySecondaryPosition = getOrCreatePosition(trade.getCounterParty(), trade.getSecondaryCurrency(), valueDate);
+
         if (trade.getDirection() == Direction.BUY) {
-            addExposure(tradingParty, primaryCurrency, valueDate, primaryAmount, trade.getTradeReference());
-            addObligation(tradingParty, secondaryCurrency, valueDate, secondaryAmount, trade.getTradeReference());
-            addExposure(counterParty, secondaryCurrency, valueDate, secondaryAmount, trade.getTradeReference());
-            addObligation(counterParty, primaryCurrency, valueDate, primaryAmount, trade.getTradeReference());
+            addExposure(tradingPartyPrimaryPosition, primaryAmount, tradeReference);
+            addObligation(tradingPartySecondaryPosition, secondaryAmount, tradeReference);
+            addExposure(counterPartySecondaryPosition, secondaryAmount, tradeReference);
+            addObligation(counterPartyPrimaryPosition, primaryAmount, tradeReference);
         } else {
-            addExposure(tradingParty, primaryCurrency, valueDate, primaryAmount, trade.getTradeReference());
-            addObligation(tradingParty, secondaryCurrency, valueDate, secondaryAmount, trade.getTradeReference());
-            addExposure(counterParty, secondaryCurrency, valueDate, secondaryAmount, trade.getTradeReference());
-            addObligation(counterParty, primaryCurrency, valueDate, primaryAmount, trade.getTradeReference());
+            addExposure(tradingPartyPrimaryPosition, primaryAmount, tradeReference);
+            addObligation(tradingPartySecondaryPosition, secondaryAmount, tradeReference);
+            addExposure(counterPartySecondaryPosition, secondaryAmount, tradeReference);
+            addObligation(counterPartyPrimaryPosition, primaryAmount, tradeReference);
         }
     }
 
     public void reversePositionsForTrade(Trade trade) {
-        String tradingParty = trade.getTradingParty();
-        String counterParty = trade.getCounterParty();
-        String primaryCurrency = trade.getPrimaryCurrency();
-        String secondaryCurrency = trade.getSecondaryCurrency();
         BigDecimal primaryAmount = trade.getPrimaryAmount();
         BigDecimal secondaryAmount = trade.getSecondaryAmount();
+        String tradeReference = trade.getTradeReference();
         LocalDate valueDate = trade.getValueDate();
 
+        Position tradingPartyPrimaryPosition = getOrCreatePosition(trade.getTradingParty(), trade.getPrimaryCurrency(), valueDate);
+        Position tradingPartySecondaryPosition = getOrCreatePosition(trade.getTradingParty(), trade.getSecondaryCurrency(), valueDate);
+        Position counterPartyPrimaryPosition = getOrCreatePosition(trade.getCounterParty(), trade.getPrimaryCurrency(), valueDate);
+        Position counterPartySecondaryPosition = getOrCreatePosition(trade.getCounterParty(), trade.getSecondaryCurrency(), valueDate);
+
         if (trade.getDirection() == Direction.BUY) {
-            reduceExposure(tradingParty, primaryCurrency, valueDate, primaryAmount, trade.getTradeReference());
-            reduceObligation(tradingParty, secondaryCurrency, valueDate, secondaryAmount, trade.getTradeReference());
-            reduceExposure(counterParty, secondaryCurrency, valueDate, secondaryAmount, trade.getTradeReference());
-            reduceObligation(counterParty, primaryCurrency, valueDate, primaryAmount, trade.getTradeReference());
+            reduceExposure(tradingPartyPrimaryPosition, primaryAmount, tradeReference);
+            reduceObligation(tradingPartySecondaryPosition, secondaryAmount, tradeReference);
+            reduceExposure(counterPartySecondaryPosition, secondaryAmount, tradeReference);
+            reduceObligation(counterPartyPrimaryPosition, primaryAmount, tradeReference);
         } else {
-            reduceExposure(tradingParty, secondaryCurrency, valueDate, secondaryAmount, trade.getTradeReference());
-            reduceObligation(tradingParty, primaryCurrency, valueDate, primaryAmount, trade.getTradeReference());
-            reduceExposure(counterParty, primaryCurrency, valueDate, primaryAmount, trade.getTradeReference());
-            reduceObligation(counterParty, secondaryCurrency, valueDate, secondaryAmount, trade.getTradeReference());
+            reduceExposure(tradingPartySecondaryPosition, secondaryAmount, tradeReference);
+            reduceObligation(tradingPartyPrimaryPosition, primaryAmount, tradeReference);
+            reduceExposure(counterPartyPrimaryPosition, primaryAmount, tradeReference);
+            reduceObligation(counterPartySecondaryPosition, secondaryAmount, tradeReference);
         }
     }
 
     public void settlePositionsForTrade(Trade trade) {
-        String tradingParty = trade.getTradingParty();
-        String counterParty = trade.getCounterParty();
-        String primaryCurrency = trade.getPrimaryCurrency();
-        String secondaryCurrency = trade.getSecondaryCurrency();
         BigDecimal primaryAmount = trade.getPrimaryAmount();
         BigDecimal secondaryAmount = trade.getSecondaryAmount();
+        String tradeReference = trade.getTradeReference();
         LocalDate valueDate = trade.getValueDate();
 
+        Position tradingPartyPrimaryPosition = getOrCreatePosition(trade.getTradingParty(), trade.getPrimaryCurrency(), valueDate);
+        Position tradingPartySecondaryPosition = getOrCreatePosition(trade.getTradingParty(), trade.getSecondaryCurrency(), valueDate);
+        Position counterPartyPrimaryPosition = getOrCreatePosition(trade.getCounterParty(), trade.getPrimaryCurrency(), valueDate);
+        Position counterPartySecondaryPosition = getOrCreatePosition(trade.getCounterParty(), trade.getSecondaryCurrency(), valueDate);
+
         if (trade.getDirection() == Direction.BUY) {
-            settlePosition(tradingParty, primaryCurrency, valueDate, primaryAmount, true, trade.getTradeReference());
-            settlePosition(tradingParty, secondaryCurrency, valueDate, secondaryAmount, false, trade.getTradeReference());
-            settlePosition(counterParty, primaryCurrency, valueDate, primaryAmount, false, trade.getTradeReference());
-            settlePosition(counterParty, secondaryCurrency, valueDate, secondaryAmount, true, trade.getTradeReference());
+            settlePosition(tradingPartyPrimaryPosition, primaryAmount, true, tradeReference);
+            settlePosition(tradingPartySecondaryPosition, secondaryAmount, false, tradeReference);
+            settlePosition(counterPartyPrimaryPosition, primaryAmount, false, tradeReference);
+            settlePosition(counterPartySecondaryPosition, secondaryAmount, true, tradeReference);
         } else {
-            settlePosition(tradingParty, primaryCurrency, valueDate, primaryAmount, false, trade.getTradeReference());
-            settlePosition(tradingParty, secondaryCurrency, valueDate, secondaryAmount, true, trade.getTradeReference());
-            settlePosition(counterParty, primaryCurrency, valueDate, primaryAmount, true, trade.getTradeReference());
-            settlePosition(counterParty, secondaryCurrency, valueDate, secondaryAmount, false, trade.getTradeReference());
+            settlePosition(tradingPartyPrimaryPosition, primaryAmount, false, tradeReference);
+            settlePosition(tradingPartySecondaryPosition, secondaryAmount, true, tradeReference);
+            settlePosition(counterPartyPrimaryPosition, primaryAmount, true, tradeReference);
+            settlePosition(counterPartySecondaryPosition, secondaryAmount, false, tradeReference);
         }
     }
 
-    private void addExposure(String party, String currency, LocalDate valueDate,
-                              BigDecimal amount, String tradeReference) {
-        Position position = getOrCreatePosition(party, currency, valueDate);
+    private void addExposure(Position position, BigDecimal amount, String tradeReference) {
         BigDecimal prevExposure = position.getExposure();
         BigDecimal prevObligation = position.getObligation();
         BigDecimal prevNet = position.getNetPosition();
@@ -99,9 +103,7 @@ public class PositionService {
                 prevExposure, prevObligation, prevNet);
     }
 
-    private void addObligation(String party, String currency, LocalDate valueDate,
-                                BigDecimal amount, String tradeReference) {
-        Position position = getOrCreatePosition(party, currency, valueDate);
+    private void addObligation(Position position, BigDecimal amount, String tradeReference) {
         BigDecimal prevExposure = position.getExposure();
         BigDecimal prevObligation = position.getObligation();
         BigDecimal prevNet = position.getNetPosition();
@@ -113,9 +115,7 @@ public class PositionService {
                 prevExposure, prevObligation, prevNet);
     }
 
-    private void reduceExposure(String party, String currency, LocalDate valueDate,
-                                 BigDecimal amount, String tradeReference) {
-        Position position = getOrCreatePosition(party, currency, valueDate);
+    private void reduceExposure(Position position, BigDecimal amount, String tradeReference) {
         BigDecimal prevExposure = position.getExposure();
         BigDecimal prevObligation = position.getObligation();
         BigDecimal prevNet = position.getNetPosition();
@@ -127,9 +127,7 @@ public class PositionService {
                 prevExposure, prevObligation, prevNet);
     }
 
-    private void reduceObligation(String party, String currency, LocalDate valueDate,
-                                   BigDecimal amount, String tradeReference) {
-        Position position = getOrCreatePosition(party, currency, valueDate);
+    private void reduceObligation(Position position, BigDecimal amount, String tradeReference) {
         BigDecimal prevExposure = position.getExposure();
         BigDecimal prevObligation = position.getObligation();
         BigDecimal prevNet = position.getNetPosition();
@@ -141,9 +139,7 @@ public class PositionService {
                 prevExposure, prevObligation, prevNet);
     }
 
-    private void settlePosition(String party, String currency, LocalDate valueDate,
-                                 BigDecimal amount, boolean isReceiving, String tradeReference) {
-        Position position = getOrCreatePosition(party, currency, valueDate);
+    private void settlePosition(Position position, BigDecimal amount, boolean isReceiving, String tradeReference) {
         BigDecimal prevExposure = position.getExposure();
         BigDecimal prevObligation = position.getObligation();
         BigDecimal prevNet = position.getNetPosition();
