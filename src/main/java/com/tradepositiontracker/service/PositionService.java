@@ -36,10 +36,10 @@ public class PositionService {
             addExposure(counterPartySecondaryPosition, secondaryAmount, tradeReference);
             addObligation(counterPartyPrimaryPosition, primaryAmount, tradeReference);
         } else {
-            addExposure(tradingPartyPrimaryPosition, primaryAmount, tradeReference);
-            addObligation(tradingPartySecondaryPosition, secondaryAmount, tradeReference);
-            addExposure(counterPartySecondaryPosition, secondaryAmount, tradeReference);
-            addObligation(counterPartyPrimaryPosition, primaryAmount, tradeReference);
+            addExposure(tradingPartyPrimaryPosition, secondaryAmount, tradeReference);
+            addObligation(tradingPartySecondaryPosition, primaryAmount, tradeReference);
+            addExposure(counterPartySecondaryPosition, primaryAmount, tradeReference);
+            addObligation(counterPartyPrimaryPosition, secondaryAmount, tradeReference);
         }
     }
 
@@ -91,6 +91,7 @@ public class PositionService {
         }
     }
 
+    
     private void addExposure(Position position, BigDecimal amount, String tradeReference) {
         BigDecimal prevExposure = position.getExposure();
         BigDecimal prevObligation = position.getObligation();
@@ -102,7 +103,6 @@ public class PositionService {
         positionHistoryService.recordChange(position, tradeReference, PositionAction.TRADE_BOOKED,
                 prevExposure, prevObligation, prevNet);
     }
-
     private void addObligation(Position position, BigDecimal amount, String tradeReference) {
         BigDecimal prevExposure = position.getExposure();
         BigDecimal prevObligation = position.getObligation();
@@ -127,6 +127,7 @@ public class PositionService {
                 prevExposure, prevObligation, prevNet);
     }
 
+
     private void reduceObligation(Position position, BigDecimal amount, String tradeReference) {
         BigDecimal prevExposure = position.getExposure();
         BigDecimal prevObligation = position.getObligation();
@@ -138,7 +139,6 @@ public class PositionService {
         positionHistoryService.recordChange(position, tradeReference, PositionAction.TRADE_REVERSED,
                 prevExposure, prevObligation, prevNet);
     }
-
     private void settlePosition(Position position, BigDecimal amount, boolean isReceiving, String tradeReference) {
         BigDecimal prevExposure = position.getExposure();
         BigDecimal prevObligation = position.getObligation();
@@ -185,3 +185,4 @@ public class PositionService {
         return positionRepository.findByPartyAndValueDateBetween(party, from, to);
     }
 }
+    
