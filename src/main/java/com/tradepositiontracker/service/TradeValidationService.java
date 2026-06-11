@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.Currency;
 
 @Service
 @RequiredArgsConstructor
@@ -52,6 +53,10 @@ public class TradeValidationService {
         if (trade.getSecondaryAmount() == null || trade.getSecondaryAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Secondary amount must be positive");
         }
+
+        validateDecimalPrecision(trade.getPrimaryCurrency(), trade.getPrimaryAmount(),"Primary Amount");
+        validateDecimalPrecision(trade.getSecondaryCurrency(), trade.getSecondaryAmount(),"Secondary Amount");
+
         if (trade.getDirection() == null) {
             throw new IllegalArgumentException("Direction is required (BUY or SELL)");
         }
@@ -59,4 +64,28 @@ public class TradeValidationService {
             throw new IllegalArgumentException("Value date is required");
         }
     }
+    private void validateDecimalPrecision(String currencyCode, BigDecimal amount, String fieldName){
+        try{
+            Currency currency = Currency.getInstance(currencyCode);
+            int allowedDecimals = currency.getDefaultFractionDigits();
+            if (allowedDecimals < 0){
+                throw new IllegalArgumentException("Unsupported currency: " + currencyCode);
+            }
+            int actualDecimals = amount.stripTrailingZeros().scale();
+            if (actualDecimals > allowedDecimals){
+                throw new IllegalArgumentException(String.format("%s exceeds allowed decimal precision. %s allows a maximum of %d decimal places, but got %d.", fieldName, currencyCode, allowedDecimals, actualDecimals));
+            }
+        }
+    
+        catch(IllegalArgumentException e){
+            if(e.getMessage() != null && e.getMessage().contains("exceeds allowed decimal precision")){
+                throw e;
+            }
+            if (e.getMessage()!= null && e.getMessage().contains("Unsupported currency type")) {
+                throw e;
+            }
+            throw new IllegalArgumentException("Invalid currency code: " + currencyCode);
+            }
+        }
+
 }
