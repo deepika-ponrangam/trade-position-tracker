@@ -33,9 +33,9 @@ public class SettlementService {
     public Trade settleTrade(String tradeReference) {
         Trade trade = findTradeByReference(tradeReference);
 
-        if (trade.getStatus() != TradeStatus.PENDING && trade.getStatus() != TradeStatus.MATCHED) {
+        if (trade.getStatus() != TradeStatus.MATCHED) {
             throw new IllegalArgumentException(
-                    "Only PENDING or MATCHED trades can be settled. Current status: " + trade.getStatus());
+                    "Only MATCHED trades can be settled. Current status: " + trade.getStatus());
         }
 
         positionService.settlePositionsForTrade(trade);
