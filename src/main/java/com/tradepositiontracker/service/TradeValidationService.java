@@ -66,25 +66,17 @@ public class TradeValidationService {
     }
     private void validateDecimalPrecision(String currencyCode, BigDecimal amount, String fieldName){
         try{
-            Currency currency = Currency.getInstance(currencyCode);
-            int allowedDecimals = currency.getDefaultFractionDigits();
-            if (allowedDecimals < 0){
-                throw new IllegalArgumentException("Unsupported currency: " + currencyCode);
-            }
-            int actualDecimals = amount.stripTrailingZeros().scale();
-            if (actualDecimals > allowedDecimals){
-                throw new IllegalArgumentException(String.format("%s exceeds allowed decimal precision. %s allows a maximum of %d decimal places, but got %d.", fieldName, currencyCode, allowedDecimals, actualDecimals));
-            }
-        }
-    
+            Currency currency = Currency.getInstance(currencyCode);}
         catch(IllegalArgumentException e){
-            if(e.getMessage() != null && e.getMessage().contains("exceeds allowed decimal precision")){
-                throw e;
+            throw new IllegalArgumentException("Invalid currency code: "+ currencyCode);
+        }
+        int allowedDecimals = currency.getDefaultFractionDigits();
+        if (allowedDecimals < 0){
+            throw new IllegalArgumentException("Unsupported currency: " + currencyCode);
             }
-            if (e.getMessage()!= null && e.getMessage().contains("Unsupported currency type")) {
-                throw e;
-            }
-            throw new IllegalArgumentException("Invalid currency code: " + currencyCode);
+        int actualDecimals = amount.stripTrailingZeros().scale();
+        if (actualDecimals > allowedDecimals){
+            throw new IllegalArgumentException(String.format("%s exceeds allowed decimal precision. %s allows a maximum of %d decimal places, but got %d.", fieldName, currencyCode, allowedDecimals, actualDecimals));
             }
         }
 
