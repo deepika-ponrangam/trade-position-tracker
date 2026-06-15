@@ -1,0 +1,23 @@
+ALTER TABLE trades_aud ADD COLUMN trade_reference_mod BOOLEAN;
+ALTER TABLE trades_aud ADD COLUMN trading_party_mod BOOLEAN;
+ALTER TABLE trades_aud ADD COLUMN counter_party_mod BOOLEAN;
+ALTER TABLE trades_aud ADD COLUMN primary_currency_mod BOOLEAN;
+ALTER TABLE trades_aud ADD COLUMN primary_amount_mod BOOLEAN;
+ALTER TABLE trades_aud ADD COLUMN secondary_currency_mod BOOLEAN;
+ALTER TABLE trades_aud ADD COLUMN secondary_amount_mod BOOLEAN;
+ALTER TABLE trades_aud ADD COLUMN direction_mod BOOLEAN;
+ALTER TABLE trades_aud ADD COLUMN trade_date_mod BOOLEAN;
+ALTER TABLE trades_aud ADD COLUMN value_date_mod BOOLEAN;
+ALTER TABLE trades_aud ADD COLUMN status_mod BOOLEAN;
+ALTER TABLE trades_aud ADD COLUMN settled_at_mod BOOLEAN;
+ALTER TABLE trades_aud ADD COLUMN created_at_mod BOOLEAN;
+ALTER TABLE trades_aud ADD COLUMN updated_at_mod BOOLEAN;
+
+ALTER TABLE positions_aud ADD COLUMN party_mod BOOLEAN;
+ALTER TABLE positions_aud ADD COLUMN currency_mod BOOLEAN;
+ALTER TABLE positions_aud ADD COLUMN value_date_mod BOOLEAN;
+ALTER TABLE positions_aud ADD COLUMN exposure_mod BOOLEAN;
+ALTER TABLE positions_aud ADD COLUMN net_position_mod BOOLEAN;
+ALTER TABLE positions_aud ADD COLUMN usd_equivalent_mod BOOLEAN;
+ALTER TABLE positions_aud ADD COLUMN created_at_mod BOOLEAN;
+ALTER TABLE positions_aud ADD COLUMN updated_at_mod BOOLEAN;

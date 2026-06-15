@@ -1,6 +1,8 @@
 package com.tradepositiontracker.controller;
 
+import com.tradepositiontracker.dto.PositionAuditResponse;
 import com.tradepositiontracker.dto.PositionResponse;
+import com.tradepositiontracker.service.PositionAuditService;
 import com.tradepositiontracker.service.PositionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -9,7 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import com.tradepositiontracker.util.CurrencyValidator;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -19,6 +21,7 @@ import java.util.List;
 public class PositionController {
 
     private final PositionService positionService;
+    private final PositionAuditService positionAuditService;
 
     @GetMapping
     public ResponseEntity<Page<PositionResponse>> getAllPositions(
@@ -47,9 +50,19 @@ public class PositionController {
     }
 
     @GetMapping("/{party}/{currency}")
-    public ResponseEntity<PositionResponse> getPosition(
-            @PathVariable String party, 
+    public ResponseEntity<List<PositionResponse>> getPosition(
+            @PathVariable String party,
             @PathVariable String currency) {
+        CurrencyValidator.validate(currency);
         return ResponseEntity.ok(positionService.getPosition(party, currency));
+    }
+    @GetMapping("/{id}/audit")
+    public ResponseEntity<List<PositionAuditResponse>> getPositionAuditHistory(@PathVariable Long id) {
+        List<PositionAuditResponse> history = positionAuditService.getPositionAuditHistory(id);
+
+        if (history.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(history);
     }
 }

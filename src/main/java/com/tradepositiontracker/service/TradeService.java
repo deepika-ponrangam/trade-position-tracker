@@ -2,7 +2,6 @@ package com.tradepositiontracker.service;
 
 import com.tradepositiontracker.dto.TradeRequest;
 import com.tradepositiontracker.dto.TradeResponse;
-import com.tradepositiontracker.enums.TradeAction;
 import com.tradepositiontracker.enums.TradeStatus;
 import com.tradepositiontracker.model.Trade;
 import com.tradepositiontracker.repository.TradeRepository;
@@ -12,7 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.tradepositiontracker.util.CurrencyFormatter;
-import com.tradepositiontracker.service.TradeHistoryService;
+
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -24,7 +23,7 @@ public class TradeService {
     private final TradeRepository tradeRepository;
     private final TradeValidationService tradeValidationService;
     private final PositionService positionService;
-    private final TradeHistoryService tradeHistoryService;
+    
 
     @Transactional
     public TradeResponse bookTrade(TradeRequest request) {
@@ -38,7 +37,7 @@ public class TradeService {
         Trade savedTrade = tradeRepository.save(trade);
 
         positionService.updatePositionsForNewTrade(savedTrade);
-        tradeHistoryService.recordChange(savedTrade, TradeAction.STATUS_CHANGED, null, BigDecimal.ZERO, BigDecimal.ZERO);
+        
         return TradeResponse.fromEntity(savedTrade);
     }
 
@@ -54,9 +53,6 @@ public class TradeService {
 
         normalizeTradeFields(amendment);
         tradeValidationService.validateAmendment(amendment);
-        TradeStatus oldStatus = existingTrade.getStatus();
-        BigDecimal oldPrimaryAmount = existingTrade.getPrimaryAmount();
-        BigDecimal oldSecondaryAmount = existingTrade.getSecondaryAmount();
         positionService.reversePositionsForTrade(existingTrade);
 
         existingTrade.setTradingParty(amendment.getTradingParty());
@@ -71,7 +67,7 @@ public class TradeService {
         Trade savedTrade = tradeRepository.save(existingTrade);
 
         positionService.updatePositionsForNewTrade(savedTrade);
-        tradeHistoryService.recordChange(savedTrade, TradeAction.STATUS_CHANGED, oldStatus, oldPrimaryAmount, oldSecondaryAmount);
+        
         return TradeResponse.fromEntity(savedTrade);
     }
     public TradeResponse getTrade(String tradeReference){
