@@ -22,8 +22,9 @@ import java.util.List;
 @RequestMapping("/api/positions")
 @RequiredArgsConstructor
 public class PositionController {
-
-    private static final int SCALE = 4;
+    
+    private static final String CURR_USD= "USD";
+    private static final String VAL_NA= "N/A";
 
     private final PositionService positionService;
     private final ExchangeRateService exchangeRateService;
@@ -67,14 +68,18 @@ public class PositionController {
                 .party(position.getParty())
                 .currency(position.getCurrency())
                 .valueDate(position.getValueDate())
-                .exposure(formatAmount(position.getExposure()))
-                .obligation(formatAmount(position.getObligation()))
-                .netPosition(formatAmount(position.getNetPosition()))
-                .usdEquivalent(usdEquiv != null ? formatAmount(usdEquiv) : "N/A")
+                .exposure(formatAmount(position.getExposure(), position.getCurrency()))
+                .obligation(formatAmount(position.getObligation(), position.getCurrency()))
+                .netPosition(formatAmount(position.getNetPosition(), position.getCurrency()))
+                .usdEquivalent(usdEquiv != null ? formatAmount(usdEquiv,CURR_USD) : VAL_NA)
                 .build();
     }
 
-    private String formatAmount(BigDecimal amount) {
-        return amount.setScale(SCALE, RoundingMode.HALF_UP).toPlainString();
+    private String formatAmount(BigDecimal amount, String currencyCode) {
+        if (amount == null){
+            return null;
+        }
+        BigDecimal formattedNumber = CurrencyFormatter.format(amount,currencyCode);
+        return formattedNumber.toPlainString();
     }
 }
