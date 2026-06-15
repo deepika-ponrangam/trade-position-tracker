@@ -73,11 +73,10 @@ public class TradeValidationService {
         int allowedDecimals = currency.getDefaultFractionDigits();
         if (allowedDecimals < 0){
             throw new IllegalArgumentException("Unsupported currency: " + currencyCode);
-            }
+        }
         int actualDecimals = amount.stripTrailingZeros().scale();
         if (actualDecimals > allowedDecimals){
             throw new IllegalArgumentException(String.format("%s exceeds allowed decimal precision. %s allows a maximum of %d decimal places, but got %d.", fieldName, currencyCode, allowedDecimals, actualDecimals));
-            }
         }
-
+    }
 }
