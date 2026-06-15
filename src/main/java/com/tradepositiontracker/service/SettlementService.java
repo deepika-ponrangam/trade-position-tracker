@@ -1,5 +1,6 @@
 package com.tradepositiontracker.service;
 
+import com.tradepositiontracker.enums.TradeAction;
 import com.tradepositiontracker.enums.TradeStatus;
 import com.tradepositiontracker.model.Trade;
 import com.tradepositiontracker.repository.TradeRepository;
@@ -15,7 +16,7 @@ public class SettlementService {
 
     private final TradeRepository tradeRepository;
     private final PositionService positionService;
-
+    private final TradeHistoryService tradeHistoryService;
     @Transactional
     public Trade matchTrade(String tradeReference) {
         Trade trade = findTradeByReference(tradeReference);
@@ -24,9 +25,11 @@ public class SettlementService {
             throw new IllegalArgumentException(
                     "Only PENDING trades can be matched. Current status: " + trade.getStatus());
         }
-
+        TradeStatus oldStatus = trade.getStatus();
         trade.setStatus(TradeStatus.MATCHED);
-        return tradeRepository.save(trade);
+        Trade savedTrade = tradeRepository.save(trade);
+        tradeHistoryService.recordChange(savedTrade, TradeAction.STATUS_CHANGED, oldStatus, savedTrade.getPrimaryAmount(), savedTrade.getSecondaryAmount());
+        return savedTrade;
     }
 
     @Transactional
@@ -38,11 +41,12 @@ public class SettlementService {
                     "Only MATCHED trades can be settled. Current status: " + trade.getStatus());
         }
 
-        positionService.settlePositionsForTrade(trade);
-
+        TradeStatus oldStatus = trade.getStatus();
         trade.setStatus(TradeStatus.SETTLED);
         trade.setSettledAt(LocalDateTime.now());
-        return tradeRepository.save(trade);
+        Trade savedTrade = tradeRepository.save(trade);
+        tradeHistoryService.recordChange(savedTrade, TradeAction.STATUS_CHANGED, oldStatus, savedTrade.getPrimaryAmount(), savedTrade.getSecondaryAmount());
+        return savedTrade;
     }
 
     @Transactional
@@ -54,10 +58,11 @@ public class SettlementService {
                     "Only PENDING or MATCHED trades can be cancelled. Current status: " + trade.getStatus());
         }
 
-        positionService.reversePositionsForTrade(trade);
-
+        TradeStatus oldStatus = trade.getStatus();
         trade.setStatus(TradeStatus.CANCELLED);
-        return tradeRepository.save(trade);
+        Trade savedTrade = tradeRepository.save(trade);
+        tradeHistoryService.recordChange(savedTrade, TradeAction.STATUS_CHANGED, oldStatus, savedTrade.getPrimaryAmount(), savedTrade.getSecondaryAmount());
+        return savedTrade;
     }
 
     private Trade findTradeByReference(String tradeReference) {
