@@ -2,22 +2,68 @@ package com.tradepositiontracker.service;
 
 import com.tradepositiontracker.enums.Direction;
 import com.tradepositiontracker.enums.PositionAction;
+import com.tradepositiontracker.dto.PositionResponse;
 import com.tradepositiontracker.model.Position;
 import com.tradepositiontracker.model.Trade;
 import com.tradepositiontracker.repository.PositionRepository;
+import com.tradepositiontracker.util.CurrencyFormatter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class PositionService {
 
+    private static final String CURRENCY_USD = "USD";
+    private static final String VALUE_NA = "N/A";
+
     private final PositionRepository positionRepository;
     private final PositionHistoryService positionHistoryService;
+    private final ExchangeRateService exchangeRateService; 
+
+    public Page<PositionResponse> getAllPositions(Pageable pageable) {
+        return positionRepository.findAll(pageable).map(this::toResponse);
+    }
+
+    public PositionResponse getPosition(String tradingParty, String currency) {
+        Position position = positionRepository.findByTradingPartyAndCurrency(tradingParty, currency)
+                .orElseThrow(() -> new IllegalArgumentException("Position not found"));
+        return toResponse(position);
+    }
+
+    public List<PositionResponse> getPositionsByParty(String party) {
+        return positionRepository.findByParty(party).stream()
+                .map(this::toResponse).toList();
+    }
+
+    public List<PositionResponse> getPositionsByPartyAndCurrency(String party, String currency) {
+        return positionRepository.findByPartyAndCurrency(party, currency).stream()
+                .map(this::toResponse).toList();
+    }
+
+    public List<PositionResponse> getPositionsByPartyAndBucket(String party, String bucket) {
+        LocalDate today = LocalDate.now();
+        List<Position> positions = switch (bucket.toUpperCase()) {
+            case "T0" -> positionRepository.findByPartyAndValueDate(party, today);
+            case "T1" -> positionRepository.findByPartyAndValueDate(party, today.plusDays(1));
+            case "T2" -> positionRepository.findByPartyAndValueDate(party, today.plusDays(2));
+            case "FORWARD" -> positionRepository.findByPartyAndValueDateGreaterThan(party, today.plusDays(2));
+            default -> throw new IllegalArgumentException("Invalid bucket. Use T0, T1, T2, or FORWARD");
+        };
+        return positions.stream().map(this::toResponse).toList();
+    }
+
+    public List<PositionResponse> getPositionsByPartyAndDateRange(String party, LocalDate from, LocalDate to) {
+        return positionRepository.findByPartyAndValueDateBetween(party, from, to).stream()
+                .map(this::toResponse).toList();
+    }
 
     public void updatePositionsForNewTrade(Trade trade) {
         BigDecimal primaryAmount = trade.getPrimaryAmount();
@@ -91,7 +137,6 @@ public class PositionService {
         }
     }
 
-    
     private void addExposure(Position position, BigDecimal amount, String tradeReference) {
         BigDecimal prevExposure = position.getExposure();
         BigDecimal prevObligation = position.getObligation();
@@ -103,6 +148,7 @@ public class PositionService {
         positionHistoryService.recordChange(position, tradeReference, PositionAction.TRADE_BOOKED,
                 prevExposure, prevObligation, prevNet);
     }
+
     private void addObligation(Position position, BigDecimal amount, String tradeReference) {
         BigDecimal prevExposure = position.getExposure();
         BigDecimal prevObligation = position.getObligation();
@@ -119,14 +165,13 @@ public class PositionService {
         BigDecimal prevExposure = position.getExposure();
         BigDecimal prevObligation = position.getObligation();
         BigDecimal prevNet = position.getNetPosition();
-
+        
         position.setExposure(prevExposure.subtract(amount));
         positionRepository.save(position);
 
         positionHistoryService.recordChange(position, tradeReference, PositionAction.TRADE_REVERSED,
                 prevExposure, prevObligation, prevNet);
     }
-
 
     private void reduceObligation(Position position, BigDecimal amount, String tradeReference) {
         BigDecimal prevExposure = position.getExposure();
@@ -139,6 +184,7 @@ public class PositionService {
         positionHistoryService.recordChange(position, tradeReference, PositionAction.TRADE_REVERSED,
                 prevExposure, prevObligation, prevNet);
     }
+
     private void settlePosition(Position position, BigDecimal amount, boolean isReceiving, String tradeReference) {
         BigDecimal prevExposure = position.getExposure();
         BigDecimal prevObligation = position.getObligation();
@@ -161,28 +207,24 @@ public class PositionService {
         return positionRepository.findByPartyAndCurrencyAndValueDate(party, currency, valueDate)
                 .orElse(new Position(party, currency, valueDate));
     }
+   
+    private PositionResponse toResponse(Position position) {
+        String currency = position.getCurrency();
+        String usdEquivalentStr = VALUE_NA;
+        
+        if (position.getUsdEquivalent() != null) {
+            usdEquivalentStr = CurrencyFormatter.format(position.getUsdEquivalent(), CURRENCY_USD).toPlainString();
+        }
 
-    public List<Position> getPositionsByParty(String party) {
-        return positionRepository.findByParty(party);
-    }
-
-    public List<Position> getPositionsByPartyAndCurrency(String party, String currency) {
-        return positionRepository.findByPartyAndCurrency(party, currency);
-    }
-
-    public List<Position> getPositionsByPartyAndBucket(String party, String bucket) {
-        LocalDate today = LocalDate.now();
-        return switch (bucket.toUpperCase()) {
-            case "T0" -> positionRepository.findByPartyAndValueDate(party, today);
-            case "T1" -> positionRepository.findByPartyAndValueDate(party, today.plusDays(1));
-            case "T2" -> positionRepository.findByPartyAndValueDate(party, today.plusDays(2));
-            case "FORWARD" -> positionRepository.findByPartyAndValueDateGreaterThan(party, today.plusDays(2));
-            default -> throw new IllegalArgumentException("Invalid bucket. Use T0, T1, T2, or FORWARD");
-        };
-    }
-
-    public List<Position> getPositionsByPartyAndDateRange(String party, LocalDate from, LocalDate to) {
-        return positionRepository.findByPartyAndValueDateBetween(party, from, to);
+        return PositionResponse.builder()
+                .id(position.getId())
+                .tradingParty(position.getTradingParty())
+                .currency(currency)
+                .exposure(CurrencyFormatter.format(position.getExposure(), currency).toPlainString())
+                .obligation(CurrencyFormatter.format(position.getObligation(), currency).toPlainString())
+                .netPosition(CurrencyFormatter.format(position.getNetPosition(), currency).toPlainString())
+                .usdEquivalent(usdEquivalentStr)
+                .updatedAt(position.getUpdatedAt())
+                .build();
     }
 }
-    

@@ -1,20 +1,15 @@
 package com.tradepositiontracker.controller;
 
 import com.tradepositiontracker.dto.PositionResponse;
-import com.tradepositiontracker.model.Position;
-import com.tradepositiontracker.service.ExchangeRateService;
 import com.tradepositiontracker.service.PositionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -23,10 +18,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PositionController {
 
-    private static final int SCALE = 4;
-
     private final PositionService positionService;
-    private final ExchangeRateService exchangeRateService;
+
+    @GetMapping
+    public ResponseEntity<Page<PositionResponse>> getAllPositions(
+            @PageableDefault(size = 20, sort = "tradingParty") Pageable pageable) {
+        return ResponseEntity.ok(positionService.getAllPositions(pageable));
+    }
 
     @GetMapping("/{party}")
     public ResponseEntity<List<PositionResponse>> getPositions(
@@ -35,7 +33,8 @@ public class PositionController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
 
-        List<Position> positions;
+        List<PositionResponse> positions;
+        
         if (bucket != null) {
             positions = positionService.getPositionsByPartyAndBucket(party, bucket);
         } else if (from != null && to != null) {
@@ -43,38 +42,14 @@ public class PositionController {
         } else {
             positions = positionService.getPositionsByParty(party);
         }
-        return ResponseEntity.ok(positions.stream().map(this::toResponse).toList());
+        
+        return ResponseEntity.ok(positions);
     }
 
     @GetMapping("/{party}/{currency}")
-    public ResponseEntity<List<PositionResponse>> getPositionsByCurrency(
-            @PathVariable String party, @PathVariable String currency) {
-        return ResponseEntity.ok(
-                positionService.getPositionsByPartyAndCurrency(party, currency.toUpperCase())
-                        .stream().map(this::toResponse).toList());
-    }
-
-    private PositionResponse toResponse(Position position) {
-        BigDecimal economicValue = position.getExposure()
-                .subtract(position.getObligation())
-                .add(position.getNetPosition());
-
-        BigDecimal usdEquiv = exchangeRateService.getUsdEquivalent(
-                position.getCurrency(), economicValue);
-
-        return PositionResponse.builder()
-                .id(position.getId())
-                .party(position.getParty())
-                .currency(position.getCurrency())
-                .valueDate(position.getValueDate())
-                .exposure(formatAmount(position.getExposure()))
-                .obligation(formatAmount(position.getObligation()))
-                .netPosition(formatAmount(position.getNetPosition()))
-                .usdEquivalent(usdEquiv != null ? formatAmount(usdEquiv) : "N/A")
-                .build();
-    }
-
-    private String formatAmount(BigDecimal amount) {
-        return amount.setScale(SCALE, RoundingMode.HALF_UP).toPlainString();
+    public ResponseEntity<PositionResponse> getPosition(
+            @PathVariable String party, 
+            @PathVariable String currency) {
+        return ResponseEntity.ok(positionService.getPosition(party, currency));
     }
 }
