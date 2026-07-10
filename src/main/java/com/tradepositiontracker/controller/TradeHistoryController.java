@@ -1,5 +1,6 @@
 package com.tradepositiontracker.controller;
 
+import com.tradepositiontracker.dto.TradeHistoryResponse;
 import com.tradepositiontracker.model.TradeHistory;
 import com.tradepositiontracker.service.TradeHistoryService;
 import lombok.RequiredArgsConstructor;
@@ -14,9 +15,8 @@ import java.util.List;
 public class TradeHistoryController {
     private final TradeHistoryService tradeHistoryService;
 
-    @GetMapping("/{tradeReference}/history")
-    public ResponseEntity<List<TradeHistory>> getTradeHistory(@PathVariable String tradeReference) {
-        List<TradeHistory> history = tradeHistoryService.getHistoryByTradeReference(tradeReference);
-        return ResponseEntity.ok(history);
+   @GetMapping("/{tradeReference}/history")
+    public ResponseEntity<List<TradeHistoryResponse>> getTradeHistory(@PathVariable String tradeReference) {
+        return ResponseEntity.ok(tradeHistoryService.getHistoryByTradeReference(tradeReference));
     }
 }

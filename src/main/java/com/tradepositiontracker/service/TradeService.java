@@ -12,10 +12,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.tradepositiontracker.util.CurrencyFormatter;
+import com.tradepositiontracker.message.TradeMessageProducer;
 import com.tradepositiontracker.service.TradeHistoryService;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +26,7 @@ public class TradeService {
     private final TradeRepository tradeRepository;
     private final TradeValidationService tradeValidationService;
     private final PositionService positionService;
+    private final TradeMessageProducer tradeMessageProducer;
     private final TradeHistoryService tradeHistoryService;
 
     @Transactional
@@ -36,10 +39,10 @@ public class TradeService {
         trade.setTradeDate(LocalDate.now());
         trade.setStatus(TradeStatus.PENDING);
         Trade savedTrade = tradeRepository.save(trade);
-
-        positionService.updatePositionsForNewTrade(savedTrade);
         tradeHistoryService.recordChange(savedTrade, TradeAction.STATUS_CHANGED, null, BigDecimal.ZERO, BigDecimal.ZERO);
-        return TradeResponse.fromEntity(savedTrade);
+        TradeResponse response = TradeResponse.fromEntity(savedTrade);
+        tradeMessageProducer.sendTradeUpdate(response);
+        return response;
     }
 
     @Transactional
@@ -51,14 +54,14 @@ public class TradeService {
             throw new IllegalArgumentException("Only PENDING or MATCHED trades can be amended");
         }
         Trade amendment = toEntity(request);
-
         normalizeTradeFields(amendment);
         tradeValidationService.validateAmendment(amendment);
         TradeStatus oldStatus = existingTrade.getStatus();
         BigDecimal oldPrimaryAmount = existingTrade.getPrimaryAmount();
         BigDecimal oldSecondaryAmount = existingTrade.getSecondaryAmount();
-        positionService.reversePositionsForTrade(existingTrade);
-
+        if (oldStatus == TradeStatus.MATCHED) {
+            positionService.reversePositionsForTrade(existingTrade);
+        }
         existingTrade.setTradingParty(amendment.getTradingParty());
         existingTrade.setCounterParty(amendment.getCounterParty());
         existingTrade.setPrimaryCurrency(amendment.getPrimaryCurrency());
@@ -68,22 +71,79 @@ public class TradeService {
         existingTrade.setDirection(amendment.getDirection());
         existingTrade.setValueDate(amendment.getValueDate());
 
-        Trade savedTrade = tradeRepository.save(existingTrade);
+        existingTrade.setStatus(TradeStatus.PENDING);
 
-        positionService.updatePositionsForNewTrade(savedTrade);
-        tradeHistoryService.recordChange(savedTrade, TradeAction.STATUS_CHANGED, oldStatus, oldPrimaryAmount, oldSecondaryAmount);
-        return TradeResponse.fromEntity(savedTrade);
+        Trade savedTrade = tradeRepository.save(existingTrade);
+        tradeHistoryService.recordChange(savedTrade, TradeAction.TRADE_AMENDED, oldStatus, oldPrimaryAmount, oldSecondaryAmount);
+        TradeResponse response = TradeResponse.fromEntity(savedTrade);
+        tradeMessageProducer.sendTradeUpdate(response);
+        return response;
     }
+    @Transactional
+    public TradeResponse matchTrade(String tradeReference){
+        Trade trade = getTradeEntity(tradeReference);
+        if(trade.getStatus()!= TradeStatus.PENDING){
+            throw new IllegalArgumentException("Only PENDING trades can be matched.");
+        }
+        TradeStatus oldStatus = trade.getStatus();
+        trade.setStatus(TradeStatus.MATCHED);
+        Trade savedTrade = tradeRepository.save(trade);
+        positionService.updatePositionsForNewTrade(savedTrade);
+        tradeHistoryService.recordChange(savedTrade, TradeAction.STATUS_CHANGED, oldStatus, savedTrade.getPrimaryAmount(), savedTrade.getSecondaryAmount());
+        TradeResponse response = TradeResponse.fromEntity(savedTrade);
+        tradeMessageProducer.sendTradeUpdate(response);
+        return response;
+    }
+    @Transactional
+    public TradeResponse settleTrade(String tradeReference){
+        Trade trade = getTradeEntity(tradeReference);
+        if(trade.getStatus()!= TradeStatus.MATCHED){
+            throw new IllegalArgumentException("Only MATCHED trades can be settled.");
+        }
+        TradeStatus oldStatus = trade.getStatus();
+        trade.setStatus(TradeStatus.SETTLED);
+        trade.setSettledAt(LocalDateTime.now());
+        Trade savedTrade = tradeRepository.save(trade);
+        positionService.settlePositionsForTrade(savedTrade);
+        tradeHistoryService.recordChange(savedTrade, TradeAction.STATUS_CHANGED, oldStatus, savedTrade.getPrimaryAmount(), savedTrade.getSecondaryAmount());
+        TradeResponse response = TradeResponse.fromEntity(savedTrade);
+        tradeMessageProducer.sendTradeUpdate(response);
+        return response;
+    }
+    @Transactional
+    public TradeResponse cancelTrade(String tradeReference) {
+        Trade trade = getTradeEntity(tradeReference);
+        if (trade.getStatus() != TradeStatus.PENDING && trade.getStatus() != TradeStatus.MATCHED) {
+            throw new IllegalArgumentException("Only PENDING or MATCHED trades can be cancelled.");
+        }
+        
+        TradeStatus oldStatus = trade.getStatus();
+        trade.setStatus(TradeStatus.CANCELLED);
+        Trade savedTrade = tradeRepository.save(trade);
+
+        if (oldStatus == TradeStatus.MATCHED) {
+            positionService.reversePositionsForTrade(savedTrade);
+        }
+
+        tradeHistoryService.recordChange(savedTrade, TradeAction.STATUS_CHANGED, oldStatus, savedTrade.getPrimaryAmount(), savedTrade.getSecondaryAmount());
+        
+        TradeResponse response = TradeResponse.fromEntity(savedTrade);
+        tradeMessageProducer.sendTradeUpdate(response);
+        return response;
+    }
+
     public TradeResponse getTrade(String tradeReference){
-        Trade trade = tradeRepository.findByTradeReference(tradeReference)
-                .orElseThrow(() -> new IllegalArgumentException("Trade not found" + tradeReference));
-        return TradeResponse.fromEntity(trade);
+        return TradeResponse.fromEntity(getTradeEntity(tradeReference));
     }
     public Page<TradeResponse> getAllTrades(Pageable pageable){
         return tradeRepository.findAll(pageable).map(TradeResponse::fromEntity);
     }
     public Page<TradeResponse> getTradesByStatus(TradeStatus status, Pageable pageable) {
         return tradeRepository.findByStatus(status, pageable).map(TradeResponse::fromEntity);
+    }
+    private Trade getTradeEntity(String tradeReference) {
+        return tradeRepository.findByTradeReference(tradeReference)
+                .orElseThrow(() -> new IllegalArgumentException("Trade not found: " + tradeReference));
     }
     private void normalizeTradeFields(Trade trade) {
         if (trade.getTradingParty() != null) {

@@ -1,5 +1,6 @@
 package com.tradepositiontracker.service;
 
+import com.tradepositiontracker.dto.ExchangeRateResponse;
 import com.tradepositiontracker.model.ExchangeRate;
 import com.tradepositiontracker.repository.ExchangeRateRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,21 +16,24 @@ public class ExchangeRateService {
 
     private final ExchangeRateRepository exchangeRateRepository;
 
-    public ExchangeRate updateRate(String currency, BigDecimal rateToUsd) {
+    public ExchangeRateResponse updateRate(String currency, BigDecimal rateToUsd) {
         ExchangeRate rate = exchangeRateRepository.findByCurrency(currency.toUpperCase())
                 .orElseGet(() -> new ExchangeRate(currency.toUpperCase(), rateToUsd));
         rate.setRateToUsd(rateToUsd);
         rate.setUpdatedAt(LocalDateTime.now());
-        return exchangeRateRepository.save(rate);
+        
+        ExchangeRate saved = exchangeRateRepository.save(rate);
+        return ExchangeRateResponse.fromEntity(saved); 
     }
 
-    public ExchangeRate getRate(String currency) {
+    public ExchangeRateResponse getRate(String currency) {
         if (currency == null){
             throw new IllegalArgumentException("Currency cannot be null");
         }
-        return exchangeRateRepository.findByCurrency(currency.toUpperCase())
+        ExchangeRate rate = exchangeRateRepository.findByCurrency(currency.toUpperCase())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Exchange rate not found for " + currency));
+        return ExchangeRateResponse.fromEntity(rate);
     }
 
     public BigDecimal getUsdEquivalent(String currency, BigDecimal amount) {
