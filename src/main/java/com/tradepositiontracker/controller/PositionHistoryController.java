@@ -23,7 +23,7 @@ public class PositionHistoryController {
     public ResponseEntity<List<PositionHistoryResponse>> getHistory(@PathVariable String party) {
         return ResponseEntity.ok(
                 positionHistoryService.getHistoryByParty(party)
-                        .stream().map(PositionHistoryHistoryR::fromEntityesponse::fromEntity).toList());
+                        .stream().map(PositionHistoryResponse::fromEntity).toList());
     }
 
     @GetMapping("/{party}/{currency}/history")
@@ -31,5 +31,6 @@ public class PositionHistoryController {
             @PathVariable String party, @PathVariable String currency) {
         return ResponseEntity.ok(
                 positionHistoryService.getHistoryByPartyAndCurrency(party, currency)
-                        .stream().map(PositionHistoryHistoryR::fromEntityesponse::fromEntity).toList());
+                        .stream().map(PositionHistoryResponse::fromEntity).toList());
     }
+}
