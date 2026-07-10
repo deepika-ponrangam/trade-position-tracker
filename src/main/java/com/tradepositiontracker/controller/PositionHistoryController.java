@@ -23,7 +23,7 @@ public class PositionHistoryController {
     public ResponseEntity<List<PositionHistoryResponse>> getHistory(@PathVariable String party) {
         return ResponseEntity.ok(
                 positionHistoryService.getHistoryByParty(party)
-                        .stream().map(this::toResponse).toList());
+                        .stream().map(PositionHistoryResponse::fromEntity).toList());
     }
 
     @GetMapping("/{party}/{currency}/history")
@@ -31,24 +31,6 @@ public class PositionHistoryController {
             @PathVariable String party, @PathVariable String currency) {
         return ResponseEntity.ok(
                 positionHistoryService.getHistoryByPartyAndCurrency(party, currency)
-                        .stream().map(this::toResponse).toList());
-    }
-
-    private PositionHistoryResponse toResponse(PositionHistory history) {
-        return PositionHistoryResponse.builder()
-                .id(history.getId())
-                .party(history.getParty())
-                .currency(history.getCurrency())
-                .valueDate(history.getValueDate())
-                .tradeReference(history.getTradeReference())
-                .action(history.getAction())
-                .previousExposure(history.getPreviousExposure())
-                .updatedExposure(history.getUpdatedExposure())
-                .previousObligation(history.getPreviousObligation())
-                .updatedObligation(history.getUpdatedObligation())
-                .previousNetPosition(history.getPreviousNetPosition())
-                .updatedNetPosition(history.getUpdatedNetPosition())
-                .timestamp(history.getTimestamp())
-                .build();
+                        .stream().map(PositionHistoryResponse::fromEntity).toList());
     }
 }

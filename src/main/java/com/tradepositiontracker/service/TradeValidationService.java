@@ -65,9 +65,10 @@ public class TradeValidationService {
         }
     }
     private void validateDecimalPrecision(String currencyCode, BigDecimal amount, String fieldName){
-        try{
-            Currency currency = Currency.getInstance(currencyCode);}
-        catch(IllegalArgumentException e){
+        Currency currency;
+        try {
+            currency = Currency.getInstance(currencyCode);
+        } catch (IllegalArgumentException e){
             throw new IllegalArgumentException("Invalid currency code: "+ currencyCode);
         }
         int allowedDecimals = currency.getDefaultFractionDigits();

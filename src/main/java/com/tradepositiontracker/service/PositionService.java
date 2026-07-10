@@ -21,31 +21,28 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PositionService {
 
-    private static final String CURRENCY_USD = "USD";
-    private static final String VALUE_NA = "N/A";
-
     private final PositionRepository positionRepository;
     private final PositionHistoryService positionHistoryService;
     private final ExchangeRateService exchangeRateService; 
 
     public Page<PositionResponse> getAllPositions(Pageable pageable) {
-        return positionRepository.findAll(pageable).map(this::toResponse);
+        return positionRepository.findAll(pageable).map(this::mapToResponse);
     }
 
-    public PositionResponse getPosition(String tradingParty, String currency) {
-        Position position = positionRepository.findByTradingPartyAndCurrency(tradingParty, currency)
+    public PositionResponse getPosition(String party, String currency) {
+        Position position = positionRepository.findByPartyAndCurrency(party, currency).stream().findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Position not found"));
-        return toResponse(position);
+        return mapToResponse(position);
     }
 
     public List<PositionResponse> getPositionsByParty(String party) {
         return positionRepository.findByParty(party).stream()
-                .map(this::toResponse).toList();
+                .map(this::mapToResponse).toList();
     }
 
     public List<PositionResponse> getPositionsByPartyAndCurrency(String party, String currency) {
         return positionRepository.findByPartyAndCurrency(party, currency).stream()
-                .map(this::toResponse).toList();
+                .map(this::mapToResponse).toList();
     }
 
     public List<PositionResponse> getPositionsByPartyAndBucket(String party, String bucket) {
@@ -57,12 +54,12 @@ public class PositionService {
             case "FORWARD" -> positionRepository.findByPartyAndValueDateGreaterThan(party, today.plusDays(2));
             default -> throw new IllegalArgumentException("Invalid bucket. Use T0, T1, T2, or FORWARD");
         };
-        return positions.stream().map(this::toResponse).toList();
+        return positions.stream().map(this::mapToResponse).toList();
     }
 
     public List<PositionResponse> getPositionsByPartyAndDateRange(String party, LocalDate from, LocalDate to) {
         return positionRepository.findByPartyAndValueDateBetween(party, from, to).stream()
-                .map(this::toResponse).toList();
+                .map(this::mapToResponse).toList();
     }
 
     public void updatePositionsForNewTrade(Trade trade) {
@@ -208,23 +205,8 @@ public class PositionService {
                 .orElse(new Position(party, currency, valueDate));
     }
    
-    private PositionResponse toResponse(Position position) {
-        String currency = position.getCurrency();
-        String usdEquivalentStr = VALUE_NA;
-        
-        if (position.getUsdEquivalent() != null) {
-            usdEquivalentStr = CurrencyFormatter.format(position.getUsdEquivalent(), CURRENCY_USD).toPlainString();
-        }
-
-        return PositionResponse.builder()
-                .id(position.getId())
-                .tradingParty(position.getTradingParty())
-                .currency(currency)
-                .exposure(CurrencyFormatter.format(position.getExposure(), currency).toPlainString())
-                .obligation(CurrencyFormatter.format(position.getObligation(), currency).toPlainString())
-                .netPosition(CurrencyFormatter.format(position.getNetPosition(), currency).toPlainString())
-                .usdEquivalent(usdEquivalentStr)
-                .updatedAt(position.getUpdatedAt())
-                .build();
+    private PositionResponse mapToResponse(Position position) {
+        BigDecimal usdEq = exchangeRateService.getUsdEquivalent(position.getCurrency(), position.getNetPosition());
+        return PositionResponse.fromEntity(position, usdEq);
     }
-}
+    }

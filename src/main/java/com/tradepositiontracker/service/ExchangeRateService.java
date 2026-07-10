@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.function.Supplier;
 
 @Service
 @RequiredArgsConstructor
@@ -16,13 +17,16 @@ public class ExchangeRateService {
 
     public ExchangeRate updateRate(String currency, BigDecimal rateToUsd) {
         ExchangeRate rate = exchangeRateRepository.findByCurrency(currency.toUpperCase())
-                .orElse(new ExchangeRate(currency.toUpperCase(), rateToUsd));
+                .orElseGet(() -> new ExchangeRate(currency.toUpperCase(), rateToUsd));
         rate.setRateToUsd(rateToUsd);
         rate.setUpdatedAt(LocalDateTime.now());
         return exchangeRateRepository.save(rate);
     }
 
     public ExchangeRate getRate(String currency) {
+        if (currency == null){
+            throw new IllegalArgumentException("Currency cannot be null");
+        }
         return exchangeRateRepository.findByCurrency(currency.toUpperCase())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Exchange rate not found for " + currency));

@@ -4,8 +4,11 @@ import com.tradepositiontracker.enums.Direction;
 import com.tradepositiontracker.enums.TradeStatus;
 import com.tradepositiontracker.model.Trade;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import com.tradepositiontracker.util.CurrencyFormatter;
 
 import java.math.BigDecimal;
@@ -14,6 +17,8 @@ import java.time.LocalDateTime;
 
 @Data
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class TradeResponse {
     private Long id;
     private String tradeReference;
