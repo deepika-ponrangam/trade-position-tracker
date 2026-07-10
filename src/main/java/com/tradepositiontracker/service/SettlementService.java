@@ -1,6 +1,4 @@
 package com.tradepositiontracker.service;
-
-import com.tradepositiontracker.dto.TradeResponse;
 import com.tradepositiontracker.enums.TradeAction;
 import com.tradepositiontracker.enums.TradeStatus;
 import com.tradepositiontracker.model.Trade;
@@ -9,7 +7,7 @@ import com.tradepositiontracker.util.CurrencyFormatter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.tradepositiontracker.dto.TradeResponse;
 import java.time.LocalDateTime;
 
 @Service
@@ -35,7 +33,7 @@ public class SettlementService {
         
         tradeHistoryService.recordChange(savedTrade, TradeAction.STATUS_CHANGED, oldStatus, savedTrade.getPrimaryAmount(), savedTrade.getSecondaryAmount());
         
-        return toResponse(savedTrade);
+        return TradeResponse.fromEntity(savedTrade);
     }
 
     @Transactional
@@ -55,7 +53,7 @@ public class SettlementService {
         positionService.settlePositionsForTrade(savedTrade);
         tradeHistoryService.recordChange(savedTrade, TradeAction.STATUS_CHANGED, oldStatus, savedTrade.getPrimaryAmount(), savedTrade.getSecondaryAmount());
         
-        return toResponse(savedTrade);
+        return TradeResponse.fromEntity(savedTrade);
     }
 
     @Transactional
@@ -74,31 +72,11 @@ public class SettlementService {
         positionService.reversePositionsForTrade(savedTrade);
         tradeHistoryService.recordChange(savedTrade, TradeAction.STATUS_CHANGED, oldStatus, savedTrade.getPrimaryAmount(), savedTrade.getSecondaryAmount());
         
-        return toResponse(savedTrade);
+        return TradeResponse.fromEntity(savedTrade);
     }
 
     private Trade findTradeByReference(String tradeReference) {
         return tradeRepository.findByTradeReference(tradeReference)
                 .orElseThrow(() -> new IllegalArgumentException("Trade not found: " + tradeReference));
-    }
-
-    private TradeResponse toResponse(Trade trade) {
-        return TradeResponse.builder()
-                .id(trade.getId())
-                .tradeReference(trade.getTradeReference())
-                .tradingParty(trade.getTradingParty())
-                .counterParty(trade.getCounterParty())
-                .primaryCurrency(trade.getPrimaryCurrency())
-                .primaryAmount(CurrencyFormatter.format(trade.getPrimaryAmount(), trade.getPrimaryCurrency()))
-                .secondaryCurrency(trade.getSecondaryCurrency())
-                .secondaryAmount(CurrencyFormatter.format(trade.getSecondaryAmount(), trade.getSecondaryCurrency()))
-                .direction(trade.getDirection())
-                .valueDate(trade.getValueDate())
-                .tradeDate(trade.getTradeDate())
-                .status(trade.getStatus())
-                .settledAt(trade.getSettledAt())
-                .createdAt(trade.getCreatedAt())
-                .updatedAt(trade.getUpdatedAt())
-                .build();
     }
 }

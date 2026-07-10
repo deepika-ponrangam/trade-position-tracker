@@ -22,7 +22,7 @@ public class PositionController {
 
     @GetMapping
     public ResponseEntity<Page<PositionResponse>> getAllPositions(
-            @PageableDefault(size = 20, sort = "tradingParty") Pageable pageable) {
+            @PageableDefault(size = 20, sort = "party") Pageable pageable) {
         return ResponseEntity.ok(positionService.getAllPositions(pageable));
     }
 

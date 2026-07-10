@@ -16,7 +16,7 @@ public class TradeHistoryController {
 
     @GetMapping("/{tradeReference}/history")
     public ResponseEntity<List<TradeHistory>> getTradeHistory(@PathVariable String tradeReference) {
-        List<TradeHistory> history = tradeHistoryService.getTradeHistoryByTradeReference(tradeReference);
+        List<TradeHistory> history = tradeHistoryService.getHistoryByTradeReference(tradeReference);
         return ResponseEntity.ok(history);
     }
 }
