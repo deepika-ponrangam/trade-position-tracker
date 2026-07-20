@@ -79,10 +79,10 @@ public class PositionService {
             addExposure(counterPartySecondaryPosition, secondaryAmount, tradeReference);
             addObligation(counterPartyPrimaryPosition, primaryAmount, tradeReference);
         } else {
-            addExposure(tradingPartyPrimaryPosition, secondaryAmount, tradeReference);
-            addObligation(tradingPartySecondaryPosition, primaryAmount, tradeReference);
-            addExposure(counterPartySecondaryPosition, primaryAmount, tradeReference);
-            addObligation(counterPartyPrimaryPosition, secondaryAmount, tradeReference);
+            addObligation(tradingPartyPrimaryPosition, primaryAmount, tradeReference);
+            addExposure(tradingPartySecondaryPosition, secondaryAmount, tradeReference);
+            addExposure(counterPartyPrimaryPosition, primaryAmount, tradeReference);
+            addObligation(counterPartySecondaryPosition, secondaryAmount, tradeReference);
         }
     }
 
