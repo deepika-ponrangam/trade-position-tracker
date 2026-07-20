@@ -7,10 +7,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
-
+import java.util.List;
 public interface TradeRepository extends JpaRepository<Trade, Long> {
 
     Optional<Trade> findByTradeReference(String tradeReference);
-
     Page<Trade> findByStatus(TradeStatus status, Pageable pageable);
+    List<Trade> findByStatusIn(List<TradeStatus> statuses);
 }

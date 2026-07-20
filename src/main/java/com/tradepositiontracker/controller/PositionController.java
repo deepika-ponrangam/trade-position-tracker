@@ -49,7 +49,7 @@ public class PositionController {
     @GetMapping("/{party}/{currency}")
     public ResponseEntity<PositionResponse> getPosition(
             @PathVariable String party, 
-            @PathVariable String currency) {
-        return ResponseEntity.ok(positionService.getPosition(party, currency));
-    }
+            @PathVariable String currency){
+            return ResponseEntity.ok(positionService.getPosition(party, currency));
+}
 }
