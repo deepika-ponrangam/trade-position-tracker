@@ -11,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -79,10 +78,10 @@ public class PositionService {
             addExposure(counterPartySecondaryPosition, secondaryAmount, tradeReference);
             addObligation(counterPartyPrimaryPosition, primaryAmount, tradeReference);
         } else {
-            addExposure(tradingPartyPrimaryPosition, secondaryAmount, tradeReference);
-            addObligation(tradingPartySecondaryPosition, primaryAmount, tradeReference);
-            addExposure(counterPartySecondaryPosition, primaryAmount, tradeReference);
-            addObligation(counterPartyPrimaryPosition, secondaryAmount, tradeReference);
+            addExposure(tradingPartySecondaryPosition, secondaryAmount, tradeReference);
+            addObligation(tradingPartyPrimaryPosition, primaryAmount, tradeReference);
+            addExposure(counterPartyPrimaryPosition, primaryAmount, tradeReference);
+            addObligation(counterPartySecondaryPosition, secondaryAmount, tradeReference);
         }
     }
 

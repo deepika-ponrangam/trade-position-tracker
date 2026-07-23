@@ -21,16 +21,12 @@ public class PositionHistoryController {
 
     @GetMapping("/{party}/history")
     public ResponseEntity<List<PositionHistoryResponse>> getHistory(@PathVariable String party) {
-        return ResponseEntity.ok(
-                positionHistoryService.getHistoryByParty(party)
-                        .stream().map(PositionHistoryResponse::fromEntity).toList());
+        return ResponseEntity.ok(positionHistoryService.getHistoryByParty(party));
     }
 
     @GetMapping("/{party}/{currency}/history")
     public ResponseEntity<List<PositionHistoryResponse>> getHistoryByCurrency(
             @PathVariable String party, @PathVariable String currency) {
-        return ResponseEntity.ok(
-                positionHistoryService.getHistoryByPartyAndCurrency(party, currency)
-                        .stream().map(PositionHistoryResponse::fromEntity).toList());
+        return ResponseEntity.ok(positionHistoryService.getHistoryByPartyAndCurrency(party, currency));
     }
 }

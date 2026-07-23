@@ -1,5 +1,6 @@
 package com.tradepositiontracker.service;
 
+import com.tradepositiontracker.dto.PositionHistoryResponse;
 import com.tradepositiontracker.enums.PositionAction;
 import com.tradepositiontracker.model.Position;
 import com.tradepositiontracker.model.PositionHistory;
@@ -34,15 +35,18 @@ public class PositionHistoryService {
         positionHistoryRepository.save(history);
     }
 
-    public List<PositionHistory> getHistoryByParty(String party) {
-        return positionHistoryRepository.findByPartyOrderByTimestampDesc(party);
+    public List<PositionHistoryResponse> getHistoryByParty(String party) {
+        return positionHistoryRepository.findByPartyOrderByTimestampDesc(party)
+                .stream().map(PositionHistoryResponse::fromEntity).toList();
     }
 
-    public List<PositionHistory> getHistoryByPartyAndCurrency(String party, String currency) {
-        return positionHistoryRepository.findByPartyAndCurrencyOrderByTimestampDesc(party, currency);
+    public List<PositionHistoryResponse> getHistoryByPartyAndCurrency(String party, String currency) {
+        return positionHistoryRepository.findByPartyAndCurrencyOrderByTimestampDesc(party, currency)
+                .stream().map(PositionHistoryResponse::fromEntity).toList();
     }
 
-    public List<PositionHistory> getHistoryByTradeReference(String tradeReference) {
-        return positionHistoryRepository.findByTradeReferenceOrderByTimestampDesc(tradeReference);
+    public List<PositionHistoryResponse> getHistoryByTradeReference(String tradeReference) {
+        return positionHistoryRepository.findByTradeReferenceOrderByTimestampDesc(tradeReference)
+                .stream().map(PositionHistoryResponse::fromEntity).toList();
     }
 }

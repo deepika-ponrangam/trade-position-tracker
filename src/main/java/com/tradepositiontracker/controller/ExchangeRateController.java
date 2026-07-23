@@ -22,21 +22,11 @@ public class ExchangeRateController {
 
     @PostMapping
     public ResponseEntity<ExchangeRateResponse> updateRate(@RequestBody ExchangeRateRequest request) {
-        ExchangeRate updated = exchangeRateService.updateRate(request.getCurrency(), request.getRateToUsd());
-        return ResponseEntity.ok(toResponse(updated));
+        return ResponseEntity.ok(exchangeRateService.updateRate(request.getCurrency(), request.getRateToUsd()));
     }
 
     @GetMapping("/{currency}")
     public ResponseEntity<ExchangeRateResponse> getRate(@PathVariable String currency) {
-        return ResponseEntity.ok(toResponse(exchangeRateService.getRate(currency)));
-    }
-
-    private ExchangeRateResponse toResponse(ExchangeRate rate) {
-        return ExchangeRateResponse.builder()
-                .id(rate.getId())
-                .currency(rate.getCurrency())
-                .rateToUsd(rate.getRateToUsd())
-                .updatedAt(rate.getUpdatedAt())
-                .build();
+        return ResponseEntity.ok(exchangeRateService.getRate(currency));
     }
 }
