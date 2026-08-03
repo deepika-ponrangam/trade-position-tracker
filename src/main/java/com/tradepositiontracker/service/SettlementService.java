@@ -1,5 +1,5 @@
 package com.tradepositiontracker.service;
-import com.tradepositiontracker.enums.TradeAction;
+
 import com.tradepositiontracker.enums.TradeStatus;
 import com.tradepositiontracker.model.Trade;
 import com.tradepositiontracker.repository.TradeRepository;
@@ -16,7 +16,7 @@ public class SettlementService {
 
     private final TradeRepository tradeRepository;
     private final PositionService positionService;
-    private final TradeHistoryService tradeHistoryService;
+    
 
     @Transactional
     public TradeResponse matchTrade(String tradeReference) {
@@ -31,7 +31,7 @@ public class SettlementService {
         trade.setStatus(TradeStatus.MATCHED);
         Trade savedTrade = tradeRepository.save(trade);
         
-        tradeHistoryService.recordChange(savedTrade, TradeAction.STATUS_CHANGED, oldStatus, savedTrade.getPrimaryAmount(), savedTrade.getSecondaryAmount());
+        
         
         return TradeResponse.fromEntity(savedTrade);
     }
@@ -51,7 +51,6 @@ public class SettlementService {
         Trade savedTrade = tradeRepository.save(trade);
         
         positionService.settlePositionsForTrade(savedTrade);
-        tradeHistoryService.recordChange(savedTrade, TradeAction.STATUS_CHANGED, oldStatus, savedTrade.getPrimaryAmount(), savedTrade.getSecondaryAmount());
         
         return TradeResponse.fromEntity(savedTrade);
     }
@@ -70,7 +69,6 @@ public class SettlementService {
         Trade savedTrade = tradeRepository.save(trade);
         
         positionService.reversePositionsForTrade(savedTrade);
-        tradeHistoryService.recordChange(savedTrade, TradeAction.STATUS_CHANGED, oldStatus, savedTrade.getPrimaryAmount(), savedTrade.getSecondaryAmount());
         
         return TradeResponse.fromEntity(savedTrade);
     }

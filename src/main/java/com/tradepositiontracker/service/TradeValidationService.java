@@ -2,6 +2,8 @@ package com.tradepositiontracker.service;
 
 import com.tradepositiontracker.model.Trade;
 import com.tradepositiontracker.repository.TradeRepository;
+import com.tradepositiontracker.util.CurrencyValidator;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -38,12 +40,10 @@ public class TradeValidationService {
         if (trade.getTradingParty().equalsIgnoreCase(trade.getCounterParty())) {
             throw new IllegalArgumentException("Trading party and counter party must be different");
         }
-        if (trade.getPrimaryCurrency() == null || trade.getPrimaryCurrency().isBlank()) {
-            throw new IllegalArgumentException("Primary currency is required");
-        }
-        if (trade.getSecondaryCurrency() == null || trade.getSecondaryCurrency().isBlank()) {
-            throw new IllegalArgumentException("Secondary currency is required");
-        }
+        
+        CurrencyValidator.validate(trade.getPrimaryCurrency());
+        CurrencyValidator.validate(trade.getSecondaryCurrency());
+
         if (trade.getPrimaryCurrency().equalsIgnoreCase(trade.getSecondaryCurrency())) {
             throw new IllegalArgumentException("Primary and secondary currencies must be different");
         }
@@ -64,20 +64,17 @@ public class TradeValidationService {
             throw new IllegalArgumentException("Value date is required");
         }
     }
-    private void validateDecimalPrecision(String currencyCode, BigDecimal amount, String fieldName){
-        Currency currency;
-        try {
-            currency = Currency.getInstance(currencyCode);
-        } catch (IllegalArgumentException e){
-            throw new IllegalArgumentException("Invalid currency code: "+ currencyCode);
-        }
+    private void validateDecimalPrecision(String currencyCode, BigDecimal amount, String fieldName) {
+        Currency currency = Currency.getInstance(currencyCode);
         int allowedDecimals = currency.getDefaultFractionDigits();
-        if (allowedDecimals < 0){
+        if (allowedDecimals < 0) {
             throw new IllegalArgumentException("Unsupported currency: " + currencyCode);
         }
         int actualDecimals = amount.stripTrailingZeros().scale();
-        if (actualDecimals > allowedDecimals){
-            throw new IllegalArgumentException(String.format("%s exceeds allowed decimal precision. %s allows a maximum of %d decimal places, but got %d.", fieldName, currencyCode, allowedDecimals, actualDecimals));
+        if (actualDecimals > allowedDecimals) {
+            throw new IllegalArgumentException(String.format(
+                "%s exceeds allowed decimal precision. %s allows a maximum of %d decimal places, but got %d.",
+                fieldName, currencyCode, allowedDecimals, actualDecimals));
         }
     }
 }
